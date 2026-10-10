@@ -165,7 +165,7 @@ body.has-player footer{padding-bottom:170px}
 
 <div id="player" class="player" hidden aria-label="Music player">
   <div class="p-top">
-    <span class="p-title">Now playing</span>
+    <span class="p-title">Everything Has Changed - Taylor Swift</span>
     <span id="pmsg" class="p-msg"></span>
   </div>
   <div class="p-seek">
@@ -214,10 +214,11 @@ body.has-player footer{padding-bottom:170px}
 </script>
 <script>
 (function(){
-  var ID='WUMpWKEVYYQ', frame=null, playing=false, dragging=false, muted=false, started=false, gotMsg=false;
+  var audio=new Audio('song.mp3'); audio.preload='auto'; audio.volume=0.7;
+  var playing=false, dragging=false, started=false;
   var $=function(i){return document.getElementById(i);};
   var player=$('player'), seek=$('seek'), tcur=$('tcur'), tdur=$('tdur'), pp=$('pp'), stopb=$('stop'), mute=$('mute'), vol=$('vol'), pmsg=$('pmsg');
-  var svg=function(p,extra){return '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">'+p+'</svg>';};
+  var svg=function(p){return '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">'+p+'</svg>';};
   var ICON={
     play:svg('<path d="M8 5v14l11-7z" fill="currentColor"/>'),
     pause:svg('<path d="M6 5h4v14H6zM14 5h4v14h-4z" fill="currentColor"/>'),
@@ -226,52 +227,33 @@ body.has-player footer{padding-bottom:170px}
     mute:svg('<path d="M3 10v4h4l5 4V6L7 10z" fill="currentColor"/><path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>')
   };
   function fmt(s){s=Math.max(0,Math.floor(s||0));return Math.floor(s/60)+':'+('0'+(s%60)).slice(-2);}
-  function post(obj){if(frame&&frame.contentWindow){frame.contentWindow.postMessage(JSON.stringify(obj),'*');}}
-  function cmd(func,args){post({event:'command',func:func,args:args||[]});}
-  function handshake(){post({event:'listening',id:1,channel:'widget'});}
   function setPlaying(p){playing=p;pp.innerHTML=p?ICON.pause:ICON.play;}
-  function updMute(){mute.innerHTML=(muted||+vol.value===0)?ICON.mute:ICON.vol;}
+  function updMute(){mute.innerHTML=(audio.muted||audio.volume===0)?ICON.mute:ICON.vol;}
+  function tryPlay(){var p=audio.play();if(p&&p.catch){p.catch(function(){pmsg.textContent='Tap play to start the music';});}}
   setPlaying(false);stopb.innerHTML=ICON.stop;updMute();
 
-  window.addEventListener('message',function(e){
-    if(typeof e.origin!=='string'||e.origin.indexOf('youtube')===-1){return;}
-    var d;try{d=typeof e.data==='string'?JSON.parse(e.data):e.data;}catch(x){return;}
-    if(!d){return;}
-    gotMsg=true;
-    if((d.event==='infoDelivery'||d.event==='initialDelivery')&&d.info){
-      var i=d.info;
-      if(typeof i.duration==='number'&&i.duration>0){seek.max=i.duration;tdur.textContent=fmt(i.duration);}
-      if(typeof i.currentTime==='number'&&!dragging){seek.value=i.currentTime;tcur.textContent=fmt(i.currentTime);}
-      if(typeof i.playerState==='number'){setPlaying(i.playerState===1||i.playerState===3);}
-      if(typeof i.muted==='boolean'){muted=i.muted;updMute();}
-      pmsg.textContent='';
-    }
-  });
+  audio.addEventListener('loadedmetadata',function(){if(isFinite(audio.duration)){seek.max=audio.duration;tdur.textContent=fmt(audio.duration);}});
+  audio.addEventListener('timeupdate',function(){if(!dragging){seek.value=audio.currentTime;tcur.textContent=fmt(audio.currentTime);}});
+  audio.addEventListener('play',function(){setPlaying(true);pmsg.textContent='';});
+  audio.addEventListener('pause',function(){setPlaying(false);});
+  audio.addEventListener('ended',function(){setPlaying(false);audio.currentTime=0;seek.value=0;tcur.textContent='0:00';});
+  audio.addEventListener('error',function(){pmsg.textContent="Couldn't load the song";});
 
-  pp.addEventListener('click',function(){if(playing){cmd('pauseVideo');setPlaying(false);}else{cmd('playVideo');setPlaying(true);}});
-  stopb.addEventListener('click',function(){cmd('pauseVideo');cmd('seekTo',[0,true]);seek.value=0;tcur.textContent='0:00';setPlaying(false);});
-  mute.addEventListener('click',function(){if(muted||+vol.value===0){if(+vol.value===0){vol.value=60;cmd('setVolume',[60]);}cmd('unMute');muted=false;}else{cmd('mute');muted=true;}updMute();});
-  vol.addEventListener('input',function(){cmd('setVolume',[+vol.value]);if(+vol.value>0&&muted){cmd('unMute');muted=false;}updMute();});
+  pp.addEventListener('click',function(){if(audio.paused){tryPlay();}else{audio.pause();}});
+  stopb.addEventListener('click',function(){audio.pause();audio.currentTime=0;seek.value=0;tcur.textContent='0:00';});
+  mute.addEventListener('click',function(){
+    if(audio.muted||audio.volume===0){if(audio.volume===0){audio.volume=0.6;vol.value=60;}audio.muted=false;}
+    else{audio.muted=true;}
+    updMute();
+  });
+  vol.addEventListener('input',function(){audio.volume=(+vol.value)/100;if(audio.volume>0&&audio.muted){audio.muted=false;}updMute();});
   seek.addEventListener('input',function(){dragging=true;tcur.textContent=fmt(+seek.value);});
-  seek.addEventListener('change',function(){cmd('seekTo',[+seek.value,true]);dragging=false;});
+  seek.addEventListener('change',function(){audio.currentTime=+seek.value;dragging=false;});
 
   window.startMusic=function(){
-    if(started){cmd('playVideo');return;}
-    started=true;player.hidden=false;document.body.classList.add('has-player');
-    var o=location.origin, org=(o&&o.indexOf('http')===0)?'&origin='+encodeURIComponent(o):'';
-    frame=document.createElement('iframe');
-    frame.className='yt';
-    frame.title='Background music';
-    frame.setAttribute('aria-hidden','true');
-    frame.allow='autoplay; encrypted-media';
-    frame.src='https://www.youtube.com/embed/'+ID+'?autoplay=1&controls=0&disablekb=1&fs=0&playsinline=1&rel=0&modestbranding=1&enablejsapi=1'+org;
-    frame.addEventListener('load',function(){
-      handshake();
-      var n=0,t=setInterval(function(){if(gotMsg||++n>20){clearInterval(t);return;}handshake();},400);
-      setTimeout(function(){cmd('setVolume',[+vol.value]);cmd('playVideo');},900);
-    });
-    document.body.appendChild(frame);
-    setTimeout(function(){if(!gotMsg){pmsg.innerHTML='Not playing? <a href="https://youtu.be/WUMpWKEVYYQ" target="_blank" rel="noopener">Open on YouTube</a>';}},9000);
+    player.hidden=false;document.body.classList.add('has-player');
+    if(started){if(audio.paused){tryPlay();}return;}
+    started=true;tryPlay();
   };
 })();
 </script>
