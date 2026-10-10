@@ -165,7 +165,7 @@ body.has-player footer{padding-bottom:170px}
 
 <div id="player" class="player" hidden aria-label="Music player">
   <div class="p-top">
-    <span class="p-title">Everything Has Changed, by Taylor Swift</span>
+    <span class="p-title">Now playing</span>
     <span id="pmsg" class="p-msg"></span>
   </div>
   <div class="p-seek">
@@ -214,7 +214,7 @@ body.has-player footer{padding-bottom:170px}
 </script>
 <script>
 (function(){
-  var ID='w1oM3kQpXRo', frame=null, playing=false, dragging=false, muted=false, started=false, gotMsg=false;
+  var ID='WUMpWKEVYYQ', frame=null, playing=false, dragging=false, muted=false, started=false, gotMsg=false;
   var $=function(i){return document.getElementById(i);};
   var player=$('player'), seek=$('seek'), tcur=$('tcur'), tdur=$('tdur'), pp=$('pp'), stopb=$('stop'), mute=$('mute'), vol=$('vol'), pmsg=$('pmsg');
   var svg=function(p,extra){return '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">'+p+'</svg>';};
@@ -271,7 +271,7 @@ body.has-player footer{padding-bottom:170px}
       setTimeout(function(){cmd('setVolume',[+vol.value]);cmd('playVideo');},900);
     });
     document.body.appendChild(frame);
-    setTimeout(function(){if(!gotMsg){pmsg.innerHTML='Not playing? <a href="https://youtu.be/w1oM3kQpXRo" target="_blank" rel="noopener">Open on YouTube</a>';}},9000);
+    setTimeout(function(){if(!gotMsg){pmsg.innerHTML='Not playing? <a href="https://youtu.be/WUMpWKEVYYQ" target="_blank" rel="noopener">Open on YouTube</a>';}},9000);
   };
 })();
 </script>
